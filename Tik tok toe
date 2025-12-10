@@ -1,0 +1,175 @@
+# tictactoe.py
+import math
+import random
+
+EMPTY = " "
+HUMAN = None
+CPU = None
+
+def create_board():
+    return [EMPTY] * 9
+
+def print_board(board):
+    # Prints a 3x3 board with indices for empty spots
+    def cell(i):
+        return board[i] if board[i] != EMPTY else str(i+1)
+    print()
+    print(f" {cell(0)} | {cell(1)} | {cell(2)} ")
+    print("---+---+---")
+    print(f" {cell(3)} | {cell(4)} | {cell(5)} ")
+    print("---+---+---")
+    print(f" {cell(6)} | {cell(7)} | {cell(8)} ")
+    print()
+
+def available_moves(board):
+    return [i for i, v in enumerate(board) if v == EMPTY]
+
+WIN_LINES = [
+    (0,1,2), (3,4,5), (6,7,8),  # rows
+    (0,3,6), (1,4,7), (2,5,8),  # cols
+    (0,4,8), (2,4,6)            # diagonals
+]
+
+def winner(board):
+    for a,b,c in WIN_LINES:
+        if board[a] == board[b] == board[c] and board[a] != EMPTY:
+            return board[a]
+    if EMPTY not in board:
+        return "Draw"
+    return None
+
+def make_move(board, index, player):
+    board[index] = player
+
+# Minimax for perfect play
+def minimax(board, depth, is_maximizing, cpu_mark, human_mark):
+    result = winner(board)
+    if result == cpu_mark:
+        return 10 - depth
+    elif result == human_mark:
+        return depth - 10
+    elif result == "Draw":
+        return 0
+
+    if is_maximizing:
+        best = -math.inf
+        for move in available_moves(board):
+            board[move] = cpu_mark
+            score = minimax(board, depth+1, False, cpu_mark, human_mark)
+            board[move] = EMPTY
+            best = max(best, score)
+        return best
+    else:
+        best = math.inf
+        for move in available_moves(board):
+            board[move] = human_mark
+            score = minimax(board, depth+1, True, cpu_mark, human_mark)
+            board[move] = EMPTY
+            best = min(best, score)
+        return best
+
+def best_move(board, cpu_mark, human_mark):
+    best_score = -math.inf
+    move_choice = None
+    for move in available_moves(board):
+        board[move] = cpu_mark
+        score = minimax(board, 0, False, cpu_mark, human_mark)
+        board[move] = EMPTY
+        if score > best_score:
+            best_score = score
+            move_choice = move
+    return move_choice
+
+def human_turn(board, mark):
+    while True:
+        try:
+            choice = input(f"Player {mark} — choose a position (1-9): ").strip()
+            idx = int(choice) - 1
+            if idx in available_moves(board):
+                make_move(board, idx, mark)
+                return
+            else:
+                print("That position is not available. Try again.")
+        except ValueError:
+            print("Please enter a number from 1 to 9.")
+
+def cpu_turn(board, cpu_mark, human_mark):
+    print("CPU is thinking...")
+    # If center is free and it's first move, pick center for stronger play
+    if len(available_moves(board)) == 9:
+        choice = 4
+    else:
+        choice = best_move(board, cpu_mark, human_mark)
+        if choice is None:
+            choice = random.choice(available_moves(board))
+    make_move(board, choice, cpu_mark)
+
+def choose_mark():
+    while True:
+        pick = input("Do you want to be X or O? (X goes first): ").strip().upper()
+        if pick in ("X","O"):
+            human_mark = pick
+            cpu_mark = "O" if pick == "X" else "X"
+            return human_mark, cpu_mark
+        print("Enter X or O.")
+
+def choose_mode():
+    print("Choose mode:")
+    print("1) Human vs Human")
+    print("2) Human vs Computer")
+    while True:
+        choice = input("Enter 1 or 2: ").strip()
+        if choice in ("1","2"):
+            return int(choice)
+        print("Invalid choice.")
+
+def main():
+    global HUMAN, CPU
+    print("=== Tic-Tac-Toe ===")
+    mode = choose_mode()
+    board = create_board()
+
+    if mode == 1:
+        # Human vs Human
+        current = "X"
+        while True:
+            print_board(board)
+            human_turn(board, current)
+            res = winner(board)
+            if res:
+                print_board(board)
+                if res == "Draw":
+                    print("It's a draw!")
+                else:
+                    print(f"Player {res} wins! 🎉")
+                break
+            current = "O" if current == "X" else "X"
+    else:
+        # Human vs CPU
+        human_mark, cpu_mark = choose_mark()
+        HUMAN = human_mark
+        CPU = cpu_mark
+        current = "X"  # X always goes first
+
+        while True:
+            print_board(board)
+            if current == HUMAN:
+                human_turn(board, HUMAN)
+            else:
+                cpu_turn(board, CPU, HUMAN)
+
+            res = winner(board)
+            if res:
+                print_board(board)
+                if res == "Draw":
+                    print("It's a draw!")
+                elif res == HUMAN:
+                    print("You win! 🎉")
+                else:
+                    print("CPU wins. Better luck next time!")
+                break
+
+            current = "O" if current == "X" else "X"
+
+if __name__ == "__main__":
+    main()
